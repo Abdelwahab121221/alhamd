@@ -1,48 +1,48 @@
 "use client";
+import { useState, useEffect } from "react";
 import Head from "next/head";
 import Link from "next/link";
+import Nav from "@/app/components/Nav";
 import Auth from "@/app/components/Auth";
-import { useEffect, useState } from "react";
-import Nav from '@/app/components/Nav'
+
 export default function AssistantPanel() {
     const [data, setData] = useState();
-    const [teacher,setTeacher] = useState();
+    const [teacher, setTeacher] = useState();
     const [searchQuery, setSearchQuery] = useState("");
-    const [students, setStudents] = useState("");
+    const [students, setStudents] = useState([]);
+    const [error, setError] = useState("");
+    const [soras, setSoras] = useState([]);
     const addStudent = async () => {
-        // const name = prompt("ادخل اسم الطالب:");
-        // if (!name) {
-        //     alert("يرجى إدخال اسم الطالب.");
-        //     return;
-        // }
-        // const sora = prompt("ادخل اسم السورة:");
-        // if (!sora) {
-        //     alert("يرجى إدخال اسم السورة.");
-        //     return;
-        // }
-        // const ageInput = prompt("ادخل عمر الطالب:");
-        // const age = parseInt(ageInput, 10);
-        // if (isNaN(age) || age < 3 || age > 100) {
-        //     alert("يرجى إدخال عمر صحيح بين 3 و 100.");
-        //     return;
-        // }
-        // const goziaInput = prompt("ادخل عدد الأجزاء المحفوظة (1-30):");
-        // const gozia = parseInt(goziaInput, 10);
-        // if (isNaN(gozia) || gozia < 1 || gozia > 30) {
-        //     alert("يرجى إدخال عدد الأجزاء بشكل صحيح (بين 1 و 30).");
-        //     return;
-        // }
+        const name = prompt("ادخل اسم الطالب:");
+        if (!name) {
+            alert("يرجى إدخال اسم الطالب.");
+            return;
+        }
+        const sora = prompt("ادخل اسم السورة:");
+        if (!sora) {
+            alert("يرجى إدخال اسم السورة.");
+            return;
+        }
+        const ageInput = prompt("ادخل عمر الطالب:");
+        const age = parseInt(ageInput, 10);
+        if (isNaN(age) || age < 3 || age > 100) {
+            alert("يرجى إدخال عمر صحيح بين 3 و 100.");
+            return;
+        }
+        const goziaInput = prompt("ادخل عدد الأجزاء المحفوظة (1-30):");
+        const gozia = parseInt(goziaInput, 10);
+        if (isNaN(gozia) || gozia < 1 || gozia > 30) {
+            alert("يرجى إدخال عدد الأجزاء بشكل صحيح (بين 1 و 30).");
+            return;
+        }
         let res = await Auth("api/students/", "POST", {
-            name:'fsdafd',
-            sora:'النساء',
-            gozia:6,
-            age:6,
-            teacher:1,
+            name: name,
+            sora: sora,
+            gozia: gozia,
+            age: age,
+            teacher: teacher.id,
         });
-        console.log(await res.json());
         if (res.status === 201) {
-            // Refresh students list after adding
-            console.log(searchQuery);
             let updated = await Auth("api/search/", "POST", {
                 query: searchQuery,
             });
@@ -52,8 +52,16 @@ export default function AssistantPanel() {
         } else if (res.status === 401) {
             window.location.href = "/";
         } else {
+            const data = await res.json();
             let errorMsg = "حدث خطأ أثناء إضافة الطالب.";
             alert(errorMsg);
+            setError(
+                Object.keys(data)
+                    .map((key) => {
+                        return `${key}: ${data[key].join(", ")}`;
+                    })
+                    .join("\n")
+            );
         }
     };
     const handleSearch = async (e) => {
@@ -85,9 +93,7 @@ export default function AssistantPanel() {
                 window.location.href = "/";
                 return;
             }
-            if (data) {
-                setData(data);
-            }
+            setData(data);
         };
         const getTeacherData = async () => {
             let res = await Auth("api/teacher/", "GET");
@@ -96,11 +102,19 @@ export default function AssistantPanel() {
                 return;
             }
             let data = await res.json();
-            console.log(data);
-            if (data) {
-                setTeacher(data);
-            }
+            setTeacher(data);
         };
+        const getSoras = async () => {
+            let res = await Auth("api/soras/", "GET");
+            if (res.status === 401) {
+                window.location.href = "/";
+                return;
+            }
+            let data = await res.json();
+            console.log(data);
+            setSoras(data);
+        };
+        getSoras();
         checkLoginGetData();
         getTeacherData();
     }, []);
@@ -114,9 +128,8 @@ export default function AssistantPanel() {
                 />
                 <link rel='icon' href='/favicon.ico' />
             </Head>
-
             {/* Top Navigation */}
-            <Nav data = {data}/>
+            <Nav data={data} />
             {/* Main Content */}
             <div className='flex flex-1 bg-emerald-50'>
                 {/* Sidebar */}
@@ -143,7 +156,6 @@ export default function AssistantPanel() {
                                 لوحة التحكم
                             </span>
                         </Link>
-
                         <Link
                             href={`/dashboard/${data?.data.type}/students`}
                             className='hover:bg-green-400 flex items-center space-x-2 p-2 transition-all rounded-lg'
@@ -167,7 +179,6 @@ export default function AssistantPanel() {
                         </Link>
                     </nav>
                 </aside>
-
                 {/* Main Content */}
                 <main className='flex-1 p-8'>
                     <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
@@ -191,7 +202,11 @@ export default function AssistantPanel() {
                                     + إضافة طالب
                                 </button>
                             </div>
-
+                            {error && (
+                                <div className='text-red-600 text-center mb-2'>
+                                    {error}
+                                </div>
+                            )}
                             <div className='overflow-x-auto'>
                                 <table className='w-full'>
                                     <thead>
@@ -292,42 +307,34 @@ export default function AssistantPanel() {
                                 </table>
                             </div>
                         </div>
-
                         {/* Progress Tracking */}
                         <div className='bg-white p-6 rounded-xl shadow-lg'>
                             <h3 className='text-xl font-bold text-emerald-800 mb-6'>
                                 تتبع التقدم
                             </h3>
                             <div className='space-y-4'>
-                                <div className='flex items-center justify-between p-3 bg-emerald-50 rounded-lg'>
-                                    <span>سورة البقرة</span>
-                                    <div className='flex items-center gap-4'>
-                                        <span className='text-sm text-gray-600'>
-                                            12/20 طالب أكملوها
-                                        </span>
-                                        <div className='w-24 bg-gray-200 rounded-full h-2'>
-                                            <div className='bg-emerald-600 h-2 rounded-full w-3/5'></div>
+                                {soras.map((soraData) => (
+                                    <div
+                                        key={soraData.sora}
+                                        className='flex items-center justify-between p-3 bg-emerald-50 rounded-lg'
+                                    >
+                                        <span>{soraData.sora}</span>
+                                        <div className='flex items-center gap-4'>
+                                            <span className='text-sm text-gray-600'>
+                                                {soraData.student_count} طالب
+                                                أكملوها
+                                            </span>
                                         </div>
                                     </div>
-                                </div>
-                                {/* Add more progress items */}
+                                ))}
                             </div>
                         </div>
-
                         {/* Quick Stats */}
                         <div className='bg-white p-6 rounded-xl shadow-lg'>
                             <h3 className='text-xl font-bold text-emerald-800 mb-6'>
                                 إحصائيات سريعة
                             </h3>
-                            <div className='grid grid-cols-2 gap-4'>
-                                <div className='bg-emerald-50 p-4 rounded-lg text-center'>
-                                    <div className='text-3xl font-bold text-emerald-800'>
-                                        85
-                                    </div>
-                                    <div className='text-gray-600'>
-                                        طالب نشط
-                                    </div>
-                                </div>
+                            <div className='grid grid-cols-1'>
                                 <div className='bg-emerald-50 p-4 rounded-lg text-center'>
                                     <div className='text-3xl font-bold text-emerald-800'>
                                         23
@@ -338,45 +345,9 @@ export default function AssistantPanel() {
                                 </div>
                             </div>
                         </div>
-
-                        {/* Recent Activities */}
-                        <div className='bg-white p-6 rounded-xl shadow-lg'>
-                            <h3 className='text-xl font-bold text-emerald-800 mb-6'>
-                                النشاط الأخير
-                            </h3>
-                            <div className='space-y-4'>
-                                <div className='flex items-start gap-3'>
-                                    <div className='bg-emerald-100 p-2 rounded-full'>
-                                        <svg
-                                            className='w-5 h-5 text-emerald-600'
-                                            fill='none'
-                                            stroke='currentColor'
-                                            viewBox='0 0 24 24'
-                                        >
-                                            <path
-                                                strokeLinecap='round'
-                                                strokeLinejoin='round'
-                                                strokeWidth={2}
-                                                d='M5 13l4 4L19 7'
-                                            />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <p className='font-medium'>
-                                            علي محمد أكمل سورة الكهف
-                                        </p>
-                                        <p className='text-sm text-gray-500'>
-                                            منذ ساعتين
-                                        </p>
-                                    </div>
-                                </div>
-                                {/* Add more activities */}
-                            </div>
-                        </div>
                     </div>
                 </main>
             </div>
-
             {/* Footer */}
             <footer className='bg-emerald-800 text-white py-4 mt-8'>
                 <div className='container mx-auto text-center text-sm'>

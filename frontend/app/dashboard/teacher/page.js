@@ -1,7 +1,27 @@
 import Head from "next/head";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import Auth from "@/app/components/Auth";
+import Nav from "@/app/components/Nav";
 
 export default function SheikhPanel() {
+    const [data, setData] = useState();
+    useEffect(() => {
+        const checkLoginGetData = async () => {
+            let res = await Auth("api/type/", "POST");
+            if (res.status === 401) {
+                window.location.href = "/";
+                return;
+            }
+            let data = await res.json();
+            if (data.data.type !== "teacher") {
+                window.location.href = "/";
+                return;
+            }
+            setData(data);
+        };
+        checkLoginGetData();
+    });
     return (
         <div className='min-h-screen flex flex-col' dir='rtl'>
             <Head>
@@ -12,63 +32,8 @@ export default function SheikhPanel() {
                 />
                 <link rel='icon' href='/favicon.ico' />
             </Head>
-
             {/* Top Navigation */}
-            <nav className='bg-emerald-800 text-white p-4'>
-                <div className='container mx-auto flex justify-between items-center'>
-                    <h1 className='text-2xl font-bold'>لوحة المشايخ</h1>
-                    <div className='flex items-center space-x-6'>
-                        <button className='relative hover:text-emerald-200'>
-                            <svg
-                                className='w-6 h-6'
-                                fill='none'
-                                stroke='currentColor'
-                                viewBox='0 0 24 24'
-                            >
-                                <path
-                                    strokeLinecap='round'
-                                    strokeLinejoin='round'
-                                    strokeWidth={2}
-                                    d='M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'
-                                />
-                            </svg>
-                            <span className='absolute -top-1 -left-2 bg-red-500 text-xs w-5 h-5 rounded-full flex items-center justify-center'>
-                                2
-                            </span>
-                        </button>
-                        <div className='relative group'>
-                            <button className='flex items-center space-x-2'>
-                                <div className='w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center'>
-                                    <span className='text-emerald-800 font-bold'>
-                                        ش
-                                    </span>
-                                </div>
-                                <span className='hover:text-emerald-200'>
-                                    الشيخ محمد
-                                </span>
-                            </button>
-                            <div className='absolute hidden group-hover:block bg-white text-gray-800 rounded-lg shadow-lg mt-2 w-48 right-0'>
-                                <Link
-                                    href='/sheikh/profile'
-                                    className='block px-4 py-2 hover:bg-gray-100'
-                                >
-                                    الملف الشخصي
-                                </Link>
-                                <Link
-                                    href='/sheikh/students'
-                                    className='block px-4 py-2 hover:bg-gray-100'
-                                >
-                                    الطلاب
-                                </Link>
-                                <button className='w-full text-right px-4 py-2 hover:bg-gray-100 text-red-600'>
-                                    تسجيل الخروج
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </nav>
-
+            <Nav data={data} />
             {/* Main Content */}
             <div className='flex flex-1 bg-emerald-50'>
                 {/* Sidebar */}

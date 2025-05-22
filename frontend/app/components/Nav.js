@@ -2,28 +2,28 @@ import React, { useEffect } from 'react'
 import Auth from './Auth'
 function Nav({data}) {
     const handleLogout = async () => {
+        // Always clear cookies on logout for security
+        document.cookie = "access=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
+        document.cookie = "refresh=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
         let res = await Auth("api/logout/", "POST", {
             refresh: document.cookie
                 .split("; ")
                 .find((row) => row.startsWith("refresh="))
                 ?.split("=")[1],
         });
-        if (res.status === 401) {
+        if (res.status === 401 || res.status === 205) {
             window.location.href = "/";
             return;
         }
-        if (res.status === 205) {
-            document.cookie =
-                "access=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            document.cookie =
-                "refresh=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            window.location.href = "/";
-        }
+        window.location.href = "/";
     };
-    useEffect(()=>{
-        const checkLogin = async ()=>{
+    useEffect(() => {
+        const checkLogin = async () => {
             let res = await Auth("api/type/", "POST");
             if (res.status === 401) {
+                // Clear cookies if unauthorized
+                document.cookie = "access=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
+                document.cookie = "refresh=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
                 window.location.href = "/";
                 return;
             }
@@ -32,9 +32,9 @@ function Nav({data}) {
                 window.location.href = "/dashboard/teacher";
                 return;
             }
-        }
+        };
         checkLogin();
-    },[])
+    }, [])
   return (
     <nav className='bg-emerald-800 text-white p-4'>
       <div className='container mx-auto flex justify-between items-center'>

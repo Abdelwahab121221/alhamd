@@ -14,7 +14,6 @@ export default function Registration() {
         type: "teacher",
         teacher: "",
     });
-    console.log(form);
     const [teachers, setTeachers] = useState([]);
     // State for errors
     const [errors, setErrors] = useState({});
@@ -22,6 +21,7 @@ export default function Registration() {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
+        setErrors((prev) => ({ ...prev, [name]: undefined, server: undefined }));
     };
     // Validation logic
     const validate = () => {
@@ -35,7 +35,7 @@ export default function Registration() {
         else if (form.password.length < 6)
             newErrors.password = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
         if (!form.gender) newErrors.gender = "الجنس مطلوب";
-        if (!form.type) newErrors.type = "الفئة مطلوبة";
+        if (!form.type) newErrors.type = "نوع الحساب مطلوب";
         if (form.type === "assistant" && !form.teacher)
             newErrors.teacher = "الشيخ مطلوب";
         return newErrors;
@@ -45,43 +45,38 @@ export default function Registration() {
         e.preventDefault();
         const validationErrors = validate();
         setErrors(validationErrors);
-
         if (Object.keys(validationErrors).length === 0) {
-            if (form.type === "teacher") {
-                let res = await Auth(`api/register/`, "POST", {
+            try {
+                let payload = {
                     username: `${form.firstName} ${form.lastName}`,
                     email: form.email,
                     password: form.password,
                     gender: form.gender,
                     type: form.type,
-                });
-
+                };
+                if (form.type === "assistant") {
+                    payload.teacher = form.teacher;
+                }
+                let res = await Auth(`api/register/`, "POST", payload);
                 let data = await res.json();
                 if (res.status === 201) {
-                    document.cookie = `access=${data.access}`;
-                    document.cookie = `refresh=${data.refresh}`;
+                    // Set cookies securely (httpOnly should be set by backend)
+                    document.cookie = `access=${data.access}; path=/; secure; samesite=strict`;
+                    document.cookie = `refresh=${data.refresh}; path=/; secure; samesite=strict`;
                     window.location.href = `/dashboard/${form.type}`;
                 } else if (res.status === 400) {
-                    setErrors({ server: data.error });
+                    setErrors({
+                        server:
+                            data.error ||
+                            "حدث خطأ في التسجيل. تحقق من البيانات.",
+                    });
+                } else {
+                    setErrors({
+                        server: "حدث خطأ غير متوقع. حاول لاحقًا.",
+                    });
                 }
-            } else {
-                let res = await Auth(`api/register/`, "POST", {
-                    username: `${form.firstName} ${form.lastName}`,
-                    email: form.email,
-                    password: form.password,
-                    gender: form.gender,
-                    type: form.type,
-                    teacher: form.teacher,
-                });
-
-                let data = await res.json();
-                if (res.status === 201) {
-                    document.cookie = `access=${data.access}`;
-                    document.cookie = `refresh=${data.refresh}`;
-                    window.location.href = `/dashboard/${form.type}`;
-                } else if (res.status === 400) {
-                    setErrors({ server: data.error });
-                }
+            } catch (err) {
+                setErrors({ server: "فشل الاتصال بالخادم. حاول لاحقًا." });
             }
         }
     };
@@ -249,7 +244,7 @@ export default function Registration() {
                                 <div className='gap-6'>
                                     <div>
                                         <label className='block text-gray-700 mb-2'>
-                                            الفئة
+                                            نوع الحساب
                                         </label>
                                         <select
                                             name='type'

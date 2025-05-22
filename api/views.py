@@ -4,7 +4,7 @@ from rest_framework.views import status
 from rest_framework.response import Response
 from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied
-from .models import Type, Table , Student , Assistant
+from .models import Type, Table , Student , Assistant , QURAN_SORAS
 from .serializers import TableSerializer, TypeSerializer, UserSerializer , StudentSerializer
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -84,8 +84,8 @@ class TableDetail(generics.RetrieveUpdateDestroyAPIView):
             )
 
 
+# --- Student Views ---
 class StudentList(generics.ListCreateAPIView):
-    queryset = Student.objects.all()
     serializer_class = StudentSerializer
     permission_classes = [IsAuthenticated]
 
@@ -107,31 +107,35 @@ class StudentList(generics.ListCreateAPIView):
         try:
             user_type = Type.objects.get(user=user)
         except Type.DoesNotExist:
-            return Response({"error": "Type not found."}, status=status.HTTP_400_BAD_REQUEST)
+            raise PermissionDenied("Type not found.")
         if user_type.type == "teacher":
-            if serializer.is_valid():
-                serializer.save(teacher=user)
+            serializer.save(teacher=user)
         elif Assistant.objects.filter(name=user.username).exists():
             assistant = Assistant.objects.get(name=user.username)
-            print(int(assistant.teacher.id) == int(self.request.data.get('teacher','')))
-            if int(assistant.teacher.id) == int(self.request.data.get('teacher','')):
+            teacher_id = self.request.data.get('teacher', '')
+            if int(assistant.teacher.id) == int(teacher_id):
                 serializer.save(teacher=assistant.teacher)
             else:
-                return Response(
-                    {"error": "That's not your teacher"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+                raise PermissionDenied("That's not your teacher.")
         else:
-            return Response(
-                {"error": "You are not allowed to create a student."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
+            raise PermissionDenied("You are not allowed to create a student.")
 
 class StudentDetail(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Student.objects.all()
     serializer_class = StudentSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        try:
+            user_type = Type.objects.get(user=user)
+        except Type.DoesNotExist:
+            return Student.objects.none()
+        if user_type.type == "teacher":
+            return Student.objects.filter(teacher=user)
+        elif Assistant.objects.filter(name=user.username).exists():
+            assistant = Assistant.objects.get(name=user.username)
+            return Student.objects.filter(teacher=assistant.teacher)
+        return Student.objects.none()
 
     def get_object(self):
         user = self.request.user
@@ -332,3 +336,13 @@ def teacher(request):
         return Response({'teacher': assistant.teacher.username,'id':assistant.teacher.id}, status=status.HTTP_200_OK)
     else:
         return Response({'error': 'You are not allowed to get teacher.'}, status=status.HTTP_403_FORBIDDEN)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def soras_stats(request):
+    stats = []
+    for sora, _ in QURAN_SORAS:
+        count = Student.objects.filter(sora=sora).count()
+        if count > 0:
+            stats.append({"sora": sora, "student_count": count})
+    return Response(stats)

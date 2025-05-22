@@ -3,6 +3,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect } from "react";
 import Auth from "@/app/components/Auth";
+
 export default function Home() {
     useEffect(() => {
         let token = null;
@@ -18,12 +19,34 @@ export default function Home() {
         }
         if (token) {
             const get_type = async () => {
-                let res = await Auth("api/type/", "POST");
-                let data = await res.json();
-                if (data.data.type === "assistant") {
-                    window.location.href = "/dashboard/assistant";
-                } else {
-                    window.location.href = "/dashboard/teacher";
+                try {
+                    let res = await Auth("api/type/", "POST");
+                    if (res.status === 401) {
+                        // Token invalid, clear cookies for security
+                        document.cookie =
+                            "access=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        document.cookie =
+                            "refresh=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        return;
+                    }
+                    let data = await res.json();
+                    if (data?.data?.type === "assistant") {
+                        window.location.href = "/dashboard/assistant";
+                    } else if (data?.data?.type === "teacher") {
+                        window.location.href = "/dashboard/teacher";
+                    } else {
+                        // Unknown type, force logout
+                        document.cookie =
+                            "access=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        document.cookie =
+                            "refresh=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                    }
+                } catch (err) {
+                    // Network or server error, force logout for safety
+                    document.cookie =
+                        "access=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                    document.cookie =
+                        "refresh=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                 }
             };
             get_type();
@@ -37,7 +60,7 @@ export default function Home() {
                     name='description'
                     content='معهد الحمد - مركز تعليم القرآن الكريم والعلوم الشرعية'
                 />
-                <meta charset='utf-8' />
+                <meta charSet='utf-8' />
                 <link rel='icon' href='/icon.png' />
             </Head>
 

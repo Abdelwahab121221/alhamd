@@ -1,4 +1,6 @@
 async function Auth(url, method, data = null) {
+    // Always use HTTPS in production
+    // let backendUrl = window.location.origin.replace("3000", "8000").replace("http://", "https://");
     let backendUrl = window.location.origin.replace("3000", "8000");
     let token = null;
     if (document.cookie) {
@@ -8,6 +10,13 @@ async function Auth(url, method, data = null) {
             if (cookie[0] === "access") {
                 token = cookie[1];
                 break;
+            }
+        }
+    }
+    if (data && typeof data === "object") {
+        for (const key in data) {
+            if (typeof data[key] === "string") {
+                data[key] = data[key].replace(/[<>]/g, "");
             }
         }
     }
@@ -41,11 +50,11 @@ async function Auth(url, method, data = null) {
                 );
                 if (refreshResponse.status === 200) {
                     const refreshData = await refreshResponse.json();
-                    document.cookie = `access=${refreshData.access};`;
+                    document.cookie = `access=${refreshData.access}; path=/; secure; samesite=strict`;
                     if (refreshData.refresh) {
-                        document.cookie = `refresh=${refreshData.refresh};`;
+                        document.cookie = `refresh=${refreshData.refresh}; path=/; secure; samesite=strict`;
                     } else {
-                        document.cookie = `refresh=${refreshToken};`;
+                        document.cookie = `refresh=${refreshToken}; path=/; secure; samesite=strict`;
                     }
                     return await fetch(`${backendUrl}/${url}`, {
                         method: method,
@@ -57,9 +66,19 @@ async function Auth(url, method, data = null) {
                         body: JSON.stringify(data),
                     });
                 } else {
+                    // Clear cookies if refresh fails
+                    document.cookie =
+                        "access=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
+                    document.cookie =
+                        "refresh=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
                     return refreshResponse;
                 }
             } else {
+                // Clear cookies if no refresh token
+                document.cookie =
+                    "access=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
+                document.cookie =
+                    "refresh=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
                 return res;
             }
         } else {
@@ -93,11 +112,11 @@ async function Auth(url, method, data = null) {
                 );
                 if (refreshResponse.status === 200) {
                     const refreshData = await refreshResponse.json();
-                    document.cookie = `access=${refreshData.access};`;
+                    document.cookie = `access=${refreshData.access}; path=/; secure; samesite=strict`;
                     if (refreshData.refresh) {
-                        document.cookie = `refresh=${refreshData.refresh};`;
+                        document.cookie = `refresh=${refreshData.refresh}; path=/; secure; samesite=strict`;
                     } else {
-                        document.cookie = `refresh=${refreshToken};`;
+                        document.cookie = `refresh=${refreshToken}; path=/; secure; samesite=strict`;
                     }
                     return await fetch(`${backendUrl}/${url}`, {
                         method: method,
@@ -106,12 +125,19 @@ async function Auth(url, method, data = null) {
                             "Content-Type": "application/json",
                             Authorization: `Bearer ${refreshData.access}`,
                         },
-                        body: JSON.stringify(data),
                     });
                 } else {
+                    document.cookie =
+                        "access=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
+                    document.cookie =
+                        "refresh=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
                     return refreshResponse;
                 }
             } else {
+                document.cookie =
+                    "access=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
+                document.cookie =
+                    "refresh=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
                 return res;
             }
         } else {
