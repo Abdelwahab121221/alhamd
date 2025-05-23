@@ -346,3 +346,37 @@ def soras_stats(request):
         if count > 0:
             stats.append({"sora": sora, "student_count": count})
     return Response(stats)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def khatma_stats(request):
+    user = request.user
+    try:
+        user_type = Type.objects.get(user=user)
+    except Type.DoesNotExist:
+        return Response({'error': 'Type not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if user_type.type == "teacher":
+        students = Student.objects.filter(teacher=user)
+    elif Assistant.objects.filter(name=user.username).exists():
+        assistant = Assistant.objects.get(name=user.username)
+        students = Student.objects.filter(teacher=assistant.teacher)
+    else:
+        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+    total_khatma = sum(student.numbers_of_khatma for student in students)
+    students_with_khatma = students.filter(numbers_of_khatma__gt=0).count()
+    top_students = students.order_by('-numbers_of_khatma')[:10]
+
+    stats = {
+        'total_khatma': total_khatma,
+        'students_with_khatma': students_with_khatma,
+        'top_students': [
+            {
+                'name': student.name,
+                'khatma_count': student.numbers_of_khatma
+            } for student in top_students
+        ]
+    }
+    
+    return Response(stats)

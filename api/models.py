@@ -17,7 +17,6 @@ class Type(models.Model):
 
 class Table(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=100)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     day = models.DateField()
@@ -150,6 +149,7 @@ class Student(models.Model):
     gozia = models.IntegerField(default=None, validators=[MaxValueValidator(30)])
     sora = models.CharField(max_length=100, choices=QURAN_SORAS)
     teacher = models.ForeignKey( User , on_delete=models.CASCADE)
+    numbers_of_khatma = models.IntegerField(default=0)
     def __str__(self):
         return f'{self.name}'
 

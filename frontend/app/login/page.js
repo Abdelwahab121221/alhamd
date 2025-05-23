@@ -25,8 +25,6 @@ export default function Login() {
     const validate = () => {
         const newErrors = {};
         if (!form.email.trim()) newErrors.email = "البريد الإلكتروني مطلوب";
-        else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email))
-            newErrors.email = "صيغة البريد الإلكتروني غير صحيحة";
         if (!form.password) newErrors.password = "كلمة المرور مطلوبة";
         else if (form.password.length < 6)
             newErrors.password = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
@@ -38,20 +36,25 @@ export default function Login() {
         const validationErrors = validate();
         setErrors(validationErrors);
         setServerError("");
+
         if (Object.keys(validationErrors).length === 0) {
             try {
-                const res = await Auth(`${apiUrl}/api/login/`, "POST", {
-                    email: form.email,
-                    password: form.password,
-                });
-                if (!res.ok) {
-                    const data = await res.json();
-                    setServerError(
-                        data.detail || "فشل تسجيل الدخول. تحقق من البيانات."
-                    );
+                let res = await Auth(`api/login/`, "POST", form);
+                if (res.status === 401) {
+                    setErrors({
+                        email: "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+                    });
+                    return;
+                }
+                let data = await res.json();
+                document.cookie = `access=${data.access};`;
+                document.cookie = `refresh=${data.refresh};`;
+                res = await Auth("api/type/", "POST");
+                data = await res.json();
+                if (data.data.type === "assistant") {
+                    window.location.href = "/dashboard/assistant";
                 } else {
-                    // Redirect or update auth context here
-                    window.location.href = "/dashboard";
+                    window.location.href = "/dashboard/teacher";
                 }
             } catch (err) {
                 setServerError("حدث خطأ في الاتصال بالخادم. حاول لاحقًا.");
@@ -116,7 +119,6 @@ export default function Login() {
                                     }`}
                                     placeholder='example@domain.com'
                                     required
-                                    autoComplete='off'
                                 />
                                 {errors.email && (
                                     <p className='text-red-600 text-sm mt-1'>
@@ -146,11 +148,6 @@ export default function Login() {
                                     </p>
                                 )}
                             </div>
-                            {serverError && (
-                                <p className='text-red-600 text-center text-sm'>
-                                    {serverError}
-                                </p>
-                            )}
                             <button
                                 type='submit'
                                 className='w-full bg-emerald-600 text-white py-3 rounded-lg hover:bg-emerald-700 transition-colors'

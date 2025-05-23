@@ -4,6 +4,7 @@ import Head from "next/head";
 import Link from "next/link";
 import Nav from "@/app/components/Nav";
 import Auth from "@/app/components/Auth";
+import SideBar from "@/app/components/Side";
 
 export default function AssistantPanel() {
     const [data, setData] = useState();
@@ -12,6 +13,11 @@ export default function AssistantPanel() {
     const [students, setStudents] = useState([]);
     const [error, setError] = useState("");
     const [soras, setSoras] = useState([]);
+    const [khatmaStats, setKhatmaStats] = useState({
+        total_khatma: 0,
+        students_with_khatma: 0,
+        top_students: [],
+    });
     const addStudent = async () => {
         const name = prompt("ادخل اسم الطالب:");
         if (!name) {
@@ -111,12 +117,22 @@ export default function AssistantPanel() {
                 return;
             }
             let data = await res.json();
-            console.log(data);
             setSoras(data);
         };
+        const getKhatmaStats = async () => {
+            let res = await Auth("api/khatma-stats/", "GET");
+            if (res.status === 401) {
+                window.location.href = "/";
+                return;
+            }
+            let data = await res.json();
+            setKhatmaStats(data);
+        };
+
         getSoras();
         checkLoginGetData();
         getTeacherData();
+        getKhatmaStats();
     }, []);
     return (
         <div className='min-h-screen flex flex-col' dir='rtl'>
@@ -133,52 +149,7 @@ export default function AssistantPanel() {
             {/* Main Content */}
             <div className='flex flex-1 bg-emerald-50'>
                 {/* Sidebar */}
-                <aside className='bg-white lg:w-64 p-4 shadow-lg'>
-                    <nav className='space-y-4'>
-                        <Link
-                            href='/dashboard/assistant'
-                            className='flex items-center space-x-2 p-2 bg-emerald-50 rounded-lg'
-                        >
-                            <svg
-                                className='w-6 h-6 text-emerald-600'
-                                fill='none'
-                                stroke='currentColor'
-                                viewBox='0 0 24 24'
-                            >
-                                <path
-                                    strokeLinecap='round'
-                                    strokeLinejoin='round'
-                                    strokeWidth={2}
-                                    d='M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'
-                                />
-                            </svg>
-                            <span className='hidden lg:inline'>
-                                لوحة التحكم
-                            </span>
-                        </Link>
-                        <Link
-                            href={`/dashboard/${data?.data.type}/students`}
-                            className='hover:bg-green-400 flex items-center space-x-2 p-2 transition-all rounded-lg'
-                        >
-                            <svg
-                                className='w-6 h-6 text-emerald-600'
-                                fill='none'
-                                stroke='currentColor'
-                                viewBox='0 0 24 24'
-                            >
-                                <path
-                                    strokeLinecap='round'
-                                    strokeLinejoin='round'
-                                    strokeWidth={2}
-                                    d='M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'
-                                />
-                            </svg>
-                            <span className='hidden lg:inline'>
-                                إدارة الطلاب
-                            </span>
-                        </Link>
-                    </nav>
-                </aside>
+                <SideBar active={1} />
                 {/* Main Content */}
                 <main className='flex-1 p-8'>
                     <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
@@ -334,14 +305,62 @@ export default function AssistantPanel() {
                             <h3 className='text-xl font-bold text-emerald-800 mb-6'>
                                 إحصائيات سريعة
                             </h3>
-                            <div className='grid grid-cols-1'>
+                            <div className='grid grid-cols-1 gap-4'>
                                 <div className='bg-emerald-50 p-4 rounded-lg text-center'>
                                     <div className='text-3xl font-bold text-emerald-800'>
-                                        23
+                                        {khatmaStats.total_khatma}
                                     </div>
                                     <div className='text-gray-600'>
-                                        إتمام حفظ هذا الشهر
+                                        إجمالي الختمات
                                     </div>
+                                </div>
+                                <div className='bg-emerald-50 p-4 rounded-lg text-center'>
+                                    <div className='text-3xl font-bold text-emerald-800'>
+                                        {khatmaStats.students_with_khatma}
+                                    </div>
+                                    <div className='text-gray-600'>
+                                        الطلاب الذين أكملوا ختمة
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className='mt-6'>
+                            <div className='bg-white p-6 rounded-lg shadow-lg'>
+                                <h3 className='text-xl font-bold text-emerald-800 mb-6'>
+                                    الطلاب المتفوقين
+                                </h3>
+                                <div className='space-y-4'>
+                                    {khatmaStats.top_students
+                                        .slice(0, 4)
+                                        .map((student) => (
+                                            <div
+                                                key={student.id}
+                                                className='flex items-center justify-between p-4 bg-emerald-50 rounded-lg shadow-sm hover:shadow-md transition-shadow'
+                                            >
+                                                <div className='flex items-center gap-4'>
+                                                    <div className='w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center'>
+                                                        <span className='text-emerald-800 font-bold text-lg'>
+                                                            {student.name[0]}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <p className='font-medium text-emerald-800'>
+                                                            {student.name}
+                                                        </p>
+                                                        <p className='text-sm text-gray-600'>
+                                                            {
+                                                                student.khatma_count
+                                                            }{" "}
+                                                            ختمة
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className='text-emerald-600 font-bold text-lg'>
+                                                    🏆
+                                                </div>
+                                            </div>
+                                        ))}
                                 </div>
                             </div>
                         </div>

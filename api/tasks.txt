@@ -2,7 +2,6 @@ whitenoise confgrations
 add .env file
 asgi in the end of the website
 
-
 feature moves
 
 make google login and facebook login
