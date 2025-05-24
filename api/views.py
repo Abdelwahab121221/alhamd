@@ -43,7 +43,7 @@ class TableList(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if Type.objects.filter(user=user).type == "teacher":
+        if Type.objects.get(user=user).type == "teacher":
             return Table.objects.filter(user=user)
         return Table.objects.none()
 
@@ -232,9 +232,19 @@ def register(request):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def login(request):
-    email = request.data.get("email")
-    password = request.data.get("password")
-    user = authenticate(username=email, password=password)
+    email = request.data.get("email", "").strip()
+    password = request.data.get("password", "").strip()
+
+    if not email or not password:
+        return Response(
+            {"error": "Email and password are required."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    if '@' in email:
+        user = authenticate(email=email, password=password)
+    else:
+        user = authenticate(username=email, password=password)
+
     if user is not None:
         refresh = RefreshToken.for_user(user)
         return Response(
@@ -246,7 +256,8 @@ def login(request):
         )
     else:
         return Response(
-            {"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
+            {"error": "Invalid credentials."},
+            status=status.HTTP_401_UNAUTHORIZED
         )
 
 
@@ -366,7 +377,10 @@ def khatma_stats(request):
 
     total_khatma = sum(student.numbers_of_khatma for student in students)
     students_with_khatma = students.filter(numbers_of_khatma__gt=0).count()
-    top_students = students.order_by('-numbers_of_khatma')[:10]
+    if students_with_khatma == 0:
+        top_students = students.order_by('-gozia')[:10]
+    else:
+        top_students = students.order_by('-numbers_of_khatma')[:10]
 
     stats = {
         'total_khatma': total_khatma,
@@ -380,3 +394,57 @@ def khatma_stats(request):
     }
     
     return Response(stats)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def profile(request):
+    user = request.user
+    try:
+        user_type = Type.objects.get(user=user)
+    except Type.DoesNotExist:
+        return Response({"error": "Type not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    profile_data = {
+        "username": user.username,
+        "email": user.email,
+        "type": user_type.type,
+        "gender": user_type.gender,
+        "date_joined": user.date_joined,
+    }
+
+    if user_type.type == "teacher":
+        profile_data["students_count"] = Student.objects.filter(teacher=user).count()
+    elif user_type.type == "assistant":
+        try:
+            assistant = Assistant.objects.get(name=user.username)
+            profile_data["teacher"] = assistant.teacher.username
+        except Assistant.DoesNotExist:
+            return Response({"error": "Assistant not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response(profile_data, status=status.HTTP_200_OK)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    user = request.user
+    current_password = request.data.get("current_password")
+    new_password = request.data.get("new_password")
+
+    if not current_password or not new_password:
+        return Response(
+            {"error": "Both current and new passwords are required."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if not user.check_password(current_password):
+        return Response(
+            {"error": "Current password is incorrect."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user.set_password(new_password)
+    user.save()
+
+    return Response(
+        {"message": "Password changed successfully."},
+        status=status.HTTP_200_OK
+    )

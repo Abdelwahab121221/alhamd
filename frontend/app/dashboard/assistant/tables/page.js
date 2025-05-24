@@ -1,18 +1,19 @@
+"use client";
 import { useState, useEffect } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-
+import Auth from "@/app/components/Auth";
 const TablesPage = () => {
-    const [tables, setTables] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [tables, setTables] = useState([]);
     const [error, setError] = useState(null);
 
     useEffect(() => {
         const fetchTables = async () => {
             try {
-                const response = await fetch("/api/tables/");
+                const response = await Auth("/api/tables/", "GET");
                 if (!response.ok) throw new Error("فشل تحميل الجداول");
                 const data = await response.json();
                 setTables(data);
@@ -31,7 +32,6 @@ const TablesPage = () => {
         return format(date, "dd MMMM yyyy", { locale: ar });
     };
 
-    if (loading) return <div className='text-center py-8'>جاري التحميل...</div>;
     if (error) return <div className='text-center py-8'>{error}</div>;
 
     return (

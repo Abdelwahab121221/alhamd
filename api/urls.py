@@ -20,6 +20,8 @@ from .views import (
     teacher,
     soras_stats,
     khatma_stats,
+    profile,
+    change_password
 )
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -47,4 +49,6 @@ urlpatterns = [
     path('teacher/',teacher,name='teacher'),
     path("soras/", soras_stats, name="soras-stats"),
     path("khatma-stats/", khatma_stats, name="khatma-stats"),
+    path("profile/", profile, name="profile"),
+    path('change-password/', change_password, name='change-password')
 ]

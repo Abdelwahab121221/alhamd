@@ -1,7 +1,7 @@
 whitenoise confgrations
 add .env file
 asgi in the end of the website
-
+add email authentication
 feature moves
 
 make google login and facebook login

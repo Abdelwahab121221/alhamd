@@ -332,7 +332,7 @@ export default function AssistantPanel() {
                                 </h3>
                                 <div className='space-y-4'>
                                     {khatmaStats.top_students
-                                        .slice(0, 4)
+                                        .slice(0, 3)
                                         .map((student) => (
                                             <div
                                                 key={student.id}
